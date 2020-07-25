@@ -139,7 +139,7 @@
 											<li class="list-inline-item">
 												<div class="radio-custom radio-primary">
 													<input type="radio" id="shadowsocks" name="type" value="1" checked>
-													<label for="shadowsocks">Shadowsocks(R) | VNET</label>
+													<label for="shadowsocks">Shadowsocks(R)</label>
 												</div>
 											</li>
 											<li class="list-inline-item">
@@ -152,6 +152,12 @@
 												<div class="radio-custom radio-primary">
 													<input type="radio" id="trojan" name="type" value="3">
 													<label for="trojan">Trojan</label>
+												</div>
+											</li>
+											<li class="list-inline-item">
+												<div class="radio-custom radio-primary">
+													<input type="radio" id="vnet" name="type" value="4" checked>
+													<label for="vnet">VNET</label>
 												</div>
 											</li>
 										</ul>
@@ -426,7 +432,7 @@
 			$('#passwd').val('{{$node->passwd}}');
 			$("input[name='type'][value='{{$node->type}}']").click();
 
-			@if($node->type==1)
+			@if($node->type == 1 || $node->type == 4)
 			// ShadowsocksR
 			$('#method').selectpicker('val', '{{$node->method}}');
 			$('#protocol').selectpicker('val', '{{$node->protocol}}');
@@ -438,7 +444,7 @@
 			@endif
 			@endif
 
-			@if($node->type==2)
+			@if($node->type == 2)
 			//V2Ray
 			$('#v2_alter_id').val('{{$node->v2_alter_id}}');
 			$('#v2_port').val('{{$node->v2_port}}');
@@ -469,6 +475,7 @@
 				$('.obfs_param').hide();
 			}
 		});
+
 		// ajax同步提交
 		function Submit() {
 			$.ajax({
@@ -596,6 +603,9 @@
 				case 3:
 					$trojan_setting.show();
 					break;
+				case 4:
+					$ssr_setting.show();
+					break;
 				default:
 			}
 		});
@@ -661,11 +671,10 @@
 				'<ol>' +
 				'<li>请勿直接复制黏贴以下配置，SSR(R)会报错的</li>' +
 				'<li>确保服务器时间为CST</li>' +
-				'<li>具体请看<a href="https://github.com/ssrpanel/SSRPanel/wiki/%E5%8D%95%E7%AB%AF%E5%8F%A3%E5%A4%9A%E7%94%A8%E6%88%B7%E7%9A%84%E5%9D%91" target="_blank">WIKI</a></li>' +
 				'</ol>' +
 				'&emsp;&emsp;"additional_ports" : {<br />' +
 				'&emsp;&emsp;&emsp;"443": {<br />' +
-				'&emsp;&emsp;&emsp;&emsp;"passwd": "@HentaiCloud!",<br />' +
+				'&emsp;&emsp;&emsp;&emsp;"passwd": "ProxyPanel",<br />' +
 				'&emsp;&emsp;&emsp;&emsp;"method": "none",<br />' +
 				'&emsp;&emsp;&emsp;&emsp;"protocol": "auth_chain_a",<br />' +
 				'&emsp;&emsp;&emsp;&emsp;"protocol_param": "#",<br />' +

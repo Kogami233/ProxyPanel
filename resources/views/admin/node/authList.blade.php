@@ -85,7 +85,7 @@
 						</h4>
 					</div>
 					<div class="modal-body">
-						@if($vl->node->type == '2')
+						@if($vl->node->type === 2)
 							<div class="alert alert-info  text-break">
 								<div class="text-center red-700 mb-5">VNET-V2Ray</div>
 								(yum install curl 2> /dev/null || apt install curl 2> /dev/null) \<br>
@@ -136,7 +136,7 @@
 								<br>
 								实时日志：journalctl -u v2ray -f
 							</div>
-						@elseif($vl->node->type == '3')
+						@elseif($vl->node->type === 3)
 							@if(!$vl->node->server)
 								<h3>请先<a href="/node/edit?id={{$vl->node->id}}" target="_blank">填写节点域名</a>并将域名解析到节点对应的IP上</h3>
 							@else
@@ -144,7 +144,7 @@
 									<div class="text-center red-700 mb-5">Trojan-Poseidon</div>
 									(yum install curl 2> /dev/null || apt install curl 2> /dev/null) \<br>
 									&& curl -L -s https://bit.ly/33UdELu \<br>
-									| WEB_API="{{\App\Components\Helpers::systemConfig()['v2ray_license'] ?: \App\Components\Helpers::systemConfig()['website_url']}}" \<br>
+									| WEB_API="{{\App\Components\Helpers::systemConfig()['web_api_url'] ?: \App\Components\Helpers::systemConfig()['website_url']}}" \<br>
 									NODE_ID={{$vl->node->id}} \<br>
 									NODE_KEY={{$vl->key}} \<br>
 									NODE_HOST={{$vl->node->server}} \<br>
@@ -152,7 +152,7 @@
 									<br>
 									<br>
 									<div class="text-center red-700 mb-5">操作命令</div>
-									更新：curl -L -s https://bit.ly/33UdELu | bash
+									更新：curl -L -s https://bit.ly/3esZ7ec | bash
 									<br>
 									卸载：curl -L -s https://bit.ly/2Jl9bs7 | bash
 									<br>

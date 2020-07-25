@@ -13,7 +13,7 @@ class V2RayController extends BaseController {
 	// 获取节点信息
 	public function getNodeInfo($id): JsonResponse {
 		$node = SsNode::query()->whereId($id)->first();
-		$nodeTls = NodeCertificate::query()->whereId($node->server)->first();
+		$nodeDv = NodeCertificate::query()->whereId($node->server)->first();
 
 		return $this->returnData('获取节点信息成功', 'success', 200, [
 			'id'              => $node->id,
@@ -21,9 +21,10 @@ class V2RayController extends BaseController {
 			'speed_limit'     => $node->speed_limit,
 			'client_limit'    => $node->client_limit,
 			'push_port'       => $node->push_port,
+			'redirect_url'    => Helpers::systemConfig()['redirect_url'],
 			'secret'          => $node->auth->secret,
-			'key'             => $nodeTls? $nodeTls->key : '',
-			'pem'             => $nodeTls? $nodeTls->pem : '',
+			'key'             => $nodeDv? $nodeDv->key : '',
+			'pem'             => $nodeDv? $nodeDv->pem : '',
 			'v2_license'      => Helpers::systemConfig()['v2ray_license'],
 			'v2_alter_id'     => $node->v2_alter_id,
 			'v2_port'         => $node->v2_port,
@@ -33,7 +34,7 @@ class V2RayController extends BaseController {
 			'v2_host'         => $node->v2_host,
 			'v2_path'         => $node->v2_path,
 			'v2_tls'          => $node->v2_tls? true : false,
-			'v2_tls_provider' => Helpers::systemConfig()['v2ray_tls_provider']?: $node->tls_provider,
+			'v2_tls_provider' => $node->tls_provider?: Helpers::systemConfig()['v2ray_tls_provider'],
 		]);
 	}
 
@@ -52,24 +53,28 @@ class V2RayController extends BaseController {
 			$data[] = $new;
 		}
 
-		if($data){
-			return $this->returnData('获取用户列表成功', 'success', 200, $data, ['updateTime' => time()]);
-		}
-
-		return $this->returnData('获取用户列表失败');
+		return $this->returnData('获取用户列表成功', 'success', 200, $data, ['updateTime' => time()]);
 	}
 
 	// 上报节点伪装域名证书信息
 	public function addCertificate(Request $request, $id): JsonResponse {
+		$key = $request->input('key');
+		$pem = $request->input('pem');
+
 		if($request->has(['key', 'pem'])){
 			$node = SsNode::find($id);
-			$obj = new NodeCertificate();
-			$obj->domain = $node->server;
-			$obj->key = $request->input('key');
-			$obj->pem = $request->input('pem');
-			$obj->save();
+			$Dv = NodeCertificate::query()->whereDomain($node->v2_host)->first();
+			if($Dv){
+				$ret = NodeCertificate::query()->whereId($Dv->id)->update(['key' => $key, 'pem' => $pem]);
+			}else{
+				$ret = new NodeCertificate();
+				$ret->domain = $node->server;
+				$ret->key = $request->input('key');
+				$ret->pem = $request->input('pem');
+				$ret->save();
+			}
 
-			if($obj->id){
+			if($ret){
 				return $this->returnData('上报节点伪装域名证书成功', 'success', 200);
 			}
 		}

@@ -13,7 +13,7 @@ Route::group(['middleware' => ['isForbidden', 'affiliate', 'isMaintenance']], fu
 	Route::get('active/{token}', 'AuthController@active'); // 激活账号
 	Route::post('sendCode', 'AuthController@sendCode'); // 发送注册验证码
 	Route::get('free', 'AuthController@free'); // 免费邀请码
-	Route::get('makePasswd', 'Controller@makePasswd'); // 生成密码
+	Route::get('makePasswd', 'Controller@makePasswd'); // 生成随机密码
 	Route::get('makeUUID', 'Controller@makeUUID'); // 生成UUID
 	Route::get('makeSecurityCode', 'Controller@makeSecurityCode'); // 生成网站安全码
 });
@@ -67,6 +67,7 @@ Route::group(['middleware' => ['isForbidden', 'isAdminLogin', 'isAdmin']], funct
 		Route::post('sendTestNotification', 'AdminController@sendTestNotification'); //推送通知测试
 		Route::any('profile', 'AdminController@profile'); // 修改个人信息
 		Route::get('makePort', 'AdminController@makePort'); // 生成端口
+		Route::get('epayInfo', 'Gateway\EPay@queryInfo');// 易支付信息
 
 		//返利相关
 		Route::group(['namespace' => 'Admin'], function() {
@@ -212,5 +213,5 @@ Route::group(['middleware' => ['isForbidden', 'isMaintenance', 'isLogin']], func
 
 Route::group(['prefix' => 'callback'], function() {
 	Route::get('checkout', 'Gateway\PayPal@getCheckout');
-	Route::post('notify', 'PaymentController@notify'); //支付回调
+	Route::any('notify', 'PaymentController@notify'); //支付回调
 });

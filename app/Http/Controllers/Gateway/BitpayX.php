@@ -4,12 +4,12 @@ namespace App\Http\Controllers\Gateway;
 
 use App\Models\Payment;
 use Auth;
+use GuzzleHttp\Client;
 use Illuminate\Http\JsonResponse;
+use Log;
 use Response;
 
 class BitpayX extends AbstractPayment {
-	private $bitpayGatewayUri = 'https://api.mugglepay.com/v1/';
-
 	public function purchase($request): JsonResponse {
 		$payment = $this->creatNewPayment(Auth::id(), $request->input('oid'), $request->input('amount'));
 
@@ -24,11 +24,9 @@ class BitpayX extends AbstractPayment {
 			'success_url'       => parent::$systemConfig['website_url'].'/invoices',
 			'cancel_url'        => parent::$systemConfig['website_url'],
 			'token'             => $this->sign($this->prepareSignId($payment->trade_no)),
-
 		];
 
 		$result = json_decode($this->mprequest($data), true);
-
 
 		if($result['status'] === 200 || $result['status'] === 201){
 			$result['payment_url'] .= '&lang=zh';
@@ -36,7 +34,7 @@ class BitpayX extends AbstractPayment {
 
 			return Response::json([
 				'status'  => 'success',
-				'url'     => $result['payment_url'] .= '&lang=zh',
+				'url'     => $result['payment_url'],
 				'message' => '创建订单成功!'
 			]);
 		}
@@ -52,7 +50,7 @@ class BitpayX extends AbstractPayment {
 		$data_sign = [
 			'merchant_order_id' => $tradeno,
 			'secret'            => parent::$systemConfig['bitpay_secret'],
-			'type'              => 'FIAT',
+			'type'              => 'FIAT'
 		];
 		ksort($data_sign);
 
@@ -60,27 +58,20 @@ class BitpayX extends AbstractPayment {
 	}
 
 	private function mprequest($data, $type = 'pay') {
-		$headers = ['content-type: application/json', 'token: '.parent::$systemConfig['bitpay_secret']];
-		$curl = curl_init();
-		if($type === 'pay'){
-			$this->bitpayGatewayUri .= 'orders';
-			curl_setopt($curl, CURLOPT_URL, $this->bitpayGatewayUri);
-			curl_setopt($curl, CURLOPT_POST, 1);
-			$data_string = json_encode($data);
-			curl_setopt($curl, CURLOPT_POSTFIELDS, $data_string);
-		}elseif($type === 'query'){
-			$this->bitpayGatewayUri .= 'orders/merchant_order_id/status?id='.$data['merchant_order_id'];
-			curl_setopt($curl, CURLOPT_URL, $this->bitpayGatewayUri);
-			curl_setopt($curl, CURLOPT_HTTPGET, 1);
-		}
-		curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
-		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
-		curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 2);
-		$data = curl_exec($curl);
-		curl_close($curl);
+		$client = new Client(['base_uri' => 'https://api.mugglepay.com/v1/', 'timeout' => 10]);
 
-		return $data;
+		if($type === 'query'){
+			$request = $client->get('orders/merchant_order_id/status?id='.$data['merchant_order_id'],
+				['json' => ['token' => parent::$systemConfig['bitpay_secret']]]);
+		}else{// pay
+			$request = $client->post('orders',
+				['json' => ['token' => parent::$systemConfig['bitpay_secret']], 'body' => json_encode($data)]);
+		}
+		if($request->getStatusCode() != 200){
+			Log::debug('BitPayX请求支付错误：'.var_export($request, true));
+		}
+
+		return $request->getBody();
 	}
 
 	public function notify($request): void {
@@ -100,23 +91,14 @@ class BitpayX extends AbstractPayment {
 		}
 		// 准备待签名数据
 		$str_to_sign = $this->prepareSignId($inputJSON['merchant_order_id']);
-		$resultVerify = $this->verify($str_to_sign, $inputJSON['token']);
 		$isPaid = $data != null && $data['status'] != null && $data['status'] === 'PAID';
 
-		if($resultVerify && $isPaid){
+		if($this->sign($str_to_sign) === $inputJSON['token'] && $isPaid){
 			$this->postPayment($inputJSON['merchant_order_id'], 'BitPayX');
-			$return['status'] = 200;
-			echo json_encode($return);
+			echo json_encode(['status' => 200]);
 		}else{
-			$return['status'] = 400;
-			echo json_encode($return);
+			echo json_encode(['status' => 400]);
 		}
 		exit();
-	}
-
-	private function verify($data, $signature): bool {
-		$mySign = $this->sign($data);
-
-		return $mySign === $signature;
 	}
 }

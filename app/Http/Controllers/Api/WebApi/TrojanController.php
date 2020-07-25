@@ -18,6 +18,7 @@ class TrojanController extends BaseController {
 			'speed_limit'  => $node->speed_limit,
 			'client_limit' => $node->client_limit,
 			'push_port'    => $node->push_port,
+			'redirect_url' => Helpers::systemConfig()['redirect_url'],
 			'trojan_port'  => $node->port,
 			'secret'       => $node->auth->secret,
 			'license'      => Helpers::systemConfig()['trojan_license'],
@@ -33,16 +34,12 @@ class TrojanController extends BaseController {
 		foreach($users as $user){
 			$new = [
 				'uid'         => $user->id,
-				'password'    => str_replace('-', '', $user->vmess_id),
+				'password'    => $user->passwd,
 				'speed_limit' => $user->speed_limit
 			];
 			$data[] = $new;
 		}
 
-		if($data){
-			return $this->returnData('获取用户列表成功', 'success', 200, $data, ['updateTime' => time()]);
-		}
-
-		return $this->returnData('获取用户列表失败');
+		return $this->returnData('获取用户列表成功', 'success', 200, $data, ['updateTime' => time()]);
 	}
 }

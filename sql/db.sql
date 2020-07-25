@@ -26,12 +26,12 @@
 CREATE TABLE `ss_node`
 (
     `id`             INT(10) UNSIGNED     NOT NULL AUTO_INCREMENT,
-    `type`           TINYINT(1) UNSIGNED  NOT NULL DEFAULT '1' COMMENT '服务类型：1-ShadowsocksR、2-V2ray',
+    `type`           TINYINT(1) UNSIGNED  NOT NULL DEFAULT '1' COMMENT '服务类型：1-Shadowsocks(R)、2-V2ray、3-Trojan、4-VNet',
     `name`           VARCHAR(128)         NOT NULL DEFAULT '' COMMENT '名称',
     `country_code`   CHAR(5)              NOT NULL DEFAULT 'un' COMMENT '国家代码',
     `server`         VARCHAR(255)         NULL     DEFAULT NULL COMMENT '服务器域名地址',
     `ip`             CHAR(15)             NULL     DEFAULT NULL COMMENT '服务器IPV4地址',
-    `ipv6`           VARCHAR(128)         NULL     DEFAULT NULL COMMENT '服务器IPV6地址',
+    `ipv6`           VARCHAR(45)          NULL     DEFAULT NULL COMMENT '服务器IPV6地址',
     `relay_server`   VARCHAR(255)         NULL     DEFAULT NULL COMMENT '中转地址',
     `relay_port`     SMALLINT(5) UNSIGNED NULL     DEFAULT 0 COMMENT '中转端口',
     `level`          TINYINT(3) UNSIGNED  NOT NULL DEFAULT '0' COMMENT '等级：0-无等级，全部可见',
@@ -63,7 +63,7 @@ CREATE TABLE `ss_node`
     `v2_type`        VARCHAR(32)          NOT NULL DEFAULT 'none' COMMENT 'V2Ray伪装类型',
     `v2_host`        VARCHAR(255)         NOT NULL DEFAULT '' COMMENT 'V2Ray伪装的域名',
     `v2_path`        VARCHAR(255)         NOT NULL DEFAULT '' COMMENT 'V2Ray的WS/H2路径',
-    `v2_tls`         BIT                  NOT NULL DEFAULT 0 COMMENT 'V2Ray后端TLS：0-未开启、1-开启',
+    `v2_tls`         BIT                  NOT NULL DEFAULT 0 COMMENT 'V2Ray连接TLS：0-未开启、1-开启',
     `tls_provider`   TEXT                 NULL     DEFAULT NULL COMMENT 'V2Ray节点的TLS提供商授权信息',
     `created_at`     DATETIME             NOT NULL,
     `updated_at`     DATETIME             NOT NULL,
@@ -141,12 +141,12 @@ CREATE TABLE `user`
     `password`        VARCHAR(64)          NOT NULL DEFAULT '' COMMENT '密码',
     `port`            SMALLINT(5) UNSIGNED NOT NULL DEFAULT '0' COMMENT '代理端口',
     `passwd`          VARCHAR(16)          NOT NULL DEFAULT '' COMMENT '代理密码',
-    `vmess_id`        VARCHAR(64)          NOT NULL DEFAULT '',
+    `vmess_id`        CHAR(36)             NOT NULL DEFAULT '',
     `transfer_enable` BIGINT(20) UNSIGNED  NOT NULL DEFAULT '1099511627776' COMMENT '可用流量，单位字节，默认1TiB',
     `u`               BIGINT(20) UNSIGNED  NOT NULL DEFAULT '0' COMMENT '已上传流量，单位字节',
     `d`               BIGINT(20) UNSIGNED  NOT NULL DEFAULT '0' COMMENT '已下载流量，单位字节',
     `t`               INT(10) UNSIGNED     NOT NULL DEFAULT '0' COMMENT '最后使用时间',
-    `ip`              CHAR(128)                     DEFAULT NULL COMMENT '最后连接IP',
+    `ip`              CHAR(15)                     DEFAULT NULL COMMENT '最后连接IP',
     `enable`          TINYINT(1)           NOT NULL DEFAULT 1 COMMENT '代理状态',
     `method`          VARCHAR(30)          NOT NULL DEFAULT 'aes-256-cfb' COMMENT '加密方式',
     `protocol`        VARCHAR(30)          NOT NULL DEFAULT 'origin' COMMENT '协议',
@@ -415,7 +415,11 @@ VALUES ('1', 'is_rand_port', 0),
        ('108', 'paypal_password', ''),
        ('109', 'paypal_secret', ''),
        ('110', 'paypal_certificate', ''),
-       ('111', 'paypal_app_id', '');
+       ('111', 'paypal_app_id', ''),
+       ('112', 'redirect_url', ''),
+       ('113', 'epay_url', ''),
+       ('114', 'epay_mch_id', ''),
+       ('115', 'epay_key', '');
 
 -- ----------------------------
 -- Table structure for article
@@ -976,7 +980,7 @@ CREATE TABLE `user_subscribe_log`
 (
     `id`             INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
     `sid`            INT(10) UNSIGNED DEFAULT NULL COMMENT '对应user_subscribe的id',
-    `request_ip`     CHAR(128)        DEFAULT NULL COMMENT '请求IP',
+    `request_ip`     CHAR(45)        DEFAULT NULL COMMENT '请求IP',
     `request_time`   DATETIME         DEFAULT NULL COMMENT '请求时间',
     `request_header` TEXT COMMENT '请求头部信息',
     PRIMARY KEY (`id`),
@@ -1210,7 +1214,7 @@ CREATE TABLE `user_login_log`
 (
     `id`         INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
     `user_id`    INT(10) UNSIGNED NOT NULL DEFAULT '0',
-    `ip`         VARCHAR(128)     NOT NULL,
+    `ip`         VARCHAR(45)     NOT NULL,
     `country`    VARCHAR(128)     NOT NULL,
     `province`   VARCHAR(128)     NOT NULL,
     `city`       VARCHAR(128)     NOT NULL,
@@ -1251,8 +1255,6 @@ CREATE TABLE `rule`
     `type`       TINYINT(1)       NOT NULL DEFAULT '1' COMMENT '类型：1-正则表达式、2-域名、3-IP、4-协议',
     `name`       VARCHAR(100)     NOT NULL COMMENT '规则描述',
     `pattern`    TEXT             NOT NULL COMMENT '规则值',
-    `created_at` DATETIME         NOT NULL,
-    `updated_at` DATETIME         NOT NULL,
     PRIMARY KEY (`id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT ='审计规则';
 
@@ -1260,50 +1262,36 @@ CREATE TABLE `rule`
 -- ----------------------------
 -- Records of rule
 -- ----------------------------
-INSERT INTO `rule`(`id`, `type`, `name`, `pattern`, `created_at`, `updated_at`)
+INSERT INTO `rule`(`id`, `type`, `name`, `pattern`)
 VALUES (1, '1', '360',
-        '(.*\.||)(^360|0360|1360|3600|360safe|^so|qhimg|qhmsg|^yunpan|qihoo|qhcdn|qhupdate|360totalsecurity|360shouji|qihucdn|360kan|secmp)\.(cn|com|net)',
-        '2019-07-19 15:04:11', '2019-07-19 15:04:11'),
-       (2, '1', '腾讯管家', '(\.guanjia\.qq\.com|qqpcmgr|QQPCMGR)', '2019-07-19 15:04:11', '2019-07-19 15:04:11'),
-       (3, '1', '金山毒霸', '(.*\.||)(rising|kingsoft|duba|xindubawukong|jinshanduba)\.(com|net|org)',
-        '2019-07-19 15:04:11', '2019-07-19 15:04:11'),
-       (4, '1', '暗网相关', '(.*\.||)(netvigator|torproject)\.(cn|com|net|org)', '2019-07-19 15:04:11',
-        '2019-07-19 15:04:11'),
+        '(.*\.||)(^360|0360|1360|3600|360safe|^so|qhimg|qhmsg|^yunpan|qihoo|qhcdn|qhupdate|360totalsecurity|360shouji|qihucdn|360kan|secmp)\.(cn|com|net)'),
+       (2, '1', '腾讯管家', '(\.guanjia\.qq\.com|qqpcmgr|QQPCMGR)'),
+       (3, '1', '金山毒霸', '(.*\.||)(rising|kingsoft|duba|xindubawukong|jinshanduba)\.(com|net|org)'),
+       (4, '1', '暗网相关', '(.*\.||)(netvigator|torproject)\.(cn|com|net|org)'),
        (5, '1', '百度定位',
-        '(api|ps|sv|offnavi|newvector|ulog\\.imap|newloc|tracknavi)(\\.map|)\\.(baidu|n\\.shifen)\\.com',
-        '2019-07-19 15:05:06', '2019-07-19 15:05:06'),
+        '(api|ps|sv|offnavi|newvector|ulog\\.imap|newloc|tracknavi)(\\.map|)\\.(baidu|n\\.shifen)\\.com'),
        (6, '1', '法轮功类',
-        '(.*\\.||)(dafahao|minghui|dongtaiwang|dajiyuan|falundata|shenyun|tuidang|epochweekly|epochtimes|ntdtv|falundafa|wujieliulan|zhengjian)\\.(org|com|net)',
-        '2019-07-19 15:05:46', '2019-07-19 15:05:46'),
+        '(.*\\.||)(dafahao|minghui|dongtaiwang|dajiyuan|falundata|shenyun|tuidang|epochweekly|epochtimes|ntdtv|falundafa|wujieliulan|zhengjian)\\.(org|com|net)'),
        (7, '1', 'BT扩展名',
-        '(torrent|\\.torrent|peer_id=|info_hash|get_peers|find_node|BitTorrent|announce_peer|announce\\.php\\?passkey=)',
-        '2019-07-19 15:06:07', '2019-07-19 15:06:07'),
+        '(torrent|\\.torrent|peer_id=|info_hash|get_peers|find_node|BitTorrent|announce_peer|announce\\.php\\?passkey=)'),
        (8, '1', '邮件滥发',
-        '((^.*\@)(guerrillamail|guerrillamailblock|sharklasers|grr|pokemail|spam4|bccto|chacuo|027168)\.(info|biz|com|de|net|org|me|la)|Subject|HELO|SMTP)',
-        '2019-07-19 15:06:20', '2019-07-19 15:06:20'),
-       (9, '1', '迅雷下载', '(.?)(xunlei|sandai|Thunder|XLLiveUD)(.)', '2019-07-19 15:06:31', '2019-07-19 15:06:31'),
+        '((^.*\@)(guerrillamail|guerrillamailblock|sharklasers|grr|pokemail|spam4|bccto|chacuo|027168)\.(info|biz|com|de|net|org|me|la)|Subject|HELO|SMTP)'),
+       (9, '1', '迅雷下载', '(.?)(xunlei|sandai|Thunder|XLLiveUD)(.)'),
        (10, '1', '大陆应用',
-        '(.*\\.||)(qq|163|sohu|sogoucdn|sogou|uc|58|taobao|qpic|bilibili|hdslb|sina|douban|doubanio|xiaohongshu|sinaimg|weibo|xiaomi)\\.(org|com|net|cn)',
-        '0000-00-00 00:00:00', '0000-00-00 00:00:00'),
+        '(.*\\.||)(baidu|qq|163|189|10000|10010|10086|sohu|sogoucdn|sogou|uc|58|taobao|qpic|bilibili|hdslb|acgvideo|sina|douban|doubanio|xiaohongshu|sinaimg|weibo|xiaomi|youzanyun|meituan|dianping|biliapi|huawei|pinduoduo|cnzz)\\.(org|com|net|cn)'),
        (11, '1', '大陆银行',
-        '(.*\\.||)(icbc|ccb|boc|bankcomm|abchina|cmbchina|psbc|cebbank|cmbc|pingan|spdb|citicbank|cib|hxb|bankofbeijing|hsbank|tccb|4001961200|bosc|hkbchina|njcb|nbcb|lj-bank|bjrcb|jsbchina|gzcb|cqcbank|czbank|hzbank|srcb|cbhb|cqrcb|grcbank|qdccb|bocd|hrbcb|jlbank|bankofdl|qlbchina|dongguanbank|cscb|hebbank|drcbank|zzbank|bsb|xmccb|hljrcc|jxnxs|gsrcu|fjnx|sxnxs|gx966888|gx966888|zj96596|hnnxs|ahrcu|shanxinj|hainanbank|scrcu|gdrcu|hbxh|ynrcc|lnrcc|nmgnxs|hebnx|jlnls|js96008|hnnx|sdnxs)\\.(org|com|net|cn)',
-        '0000-00-00 00:00:00', '0000-00-00 00:00:00'),
+        '(.*\\.||)(icbc|ccb|boc|bankcomm|abchina|cmbchina|psbc|cebbank|cmbc|pingan|spdb|citicbank|cib|hxb|bankofbeijing|hsbank|tccb|4001961200|bosc|hkbchina|njcb|nbcb|lj-bank|bjrcb|jsbchina|gzcb|cqcbank|czbank|hzbank|srcb|cbhb|cqrcb|grcbank|qdccb|bocd|hrbcb|jlbank|bankofdl|qlbchina|dongguanbank|cscb|hebbank|drcbank|zzbank|bsb|xmccb|hljrcc|jxnxs|gsrcu|fjnx|sxnxs|gx966888|gx966888|zj96596|hnnxs|ahrcu|shanxinj|hainanbank|scrcu|gdrcu|hbxh|ynrcc|lnrcc|nmgnxs|hebnx|jlnls|js96008|hnnx|sdnxs)\\.(org|com|net|cn)'),
        (12, '1', '台湾银行',
-        '(.*\\.||)(firstbank|bot|cotabank|megabank|tcb-bank|landbank|hncb|bankchb|tbb|ktb|tcbbank|scsb|bop|sunnybank|kgibank|fubon|ctbcbank|cathaybk|eximbank|bok|ubot|feib|yuantabank|sinopac|esunbank|taishinbank|jihsunbank|entiebank|hwataibank|csc|skbank)\\.(org|com|net|tw)',
-        '0000-00-00 00:00:00', '0000-00-00 00:00:00'),
+        '(.*\\.||)(firstbank|bot|cotabank|megabank|tcb-bank|landbank|hncb|bankchb|tbb|ktb|tcbbank|scsb|bop|sunnybank|kgibank|fubon|ctbcbank|cathaybk|eximbank|bok|ubot|feib|yuantabank|sinopac|esunbank|taishinbank|jihsunbank|entiebank|hwataibank|csc|skbank)\\.(org|com|net|tw)'),
        (13, '1', '大陆第三方支付',
-        '(.*\\.||)(alipay|baifubao|yeepay|99bill|95516|51credit|cmpay|tenpay|lakala|jdpay)\\.(org|com|net|cn)',
-        '0000-00-00 00:00:00', '0000-00-00 00:00:00'),
-       (14, '1', '台湾特供', '(.*\.||)(visa|mycard|mastercard|gov|gash|beanfun|bank|line)\.(org|com|net|cn|tw|jp|kr)',
-        '0000-00-00 00:00:00', '0000-00-00 00:00:00'),
+        '(.*\\.||)(alipay|baifubao|yeepay|99bill|95516|51credit|cmpay|tenpay|lakala|jdpay)\\.(org|com|net|cn)'),
+       (14, '1', '台湾特供', '(.*\.||)(visa|mycard|mastercard|gov|gash|beanfun|bank|line)\.(org|com|net|cn|tw|jp|kr)'),
        (15, '1', '涉政治类',
-        '(.*\\.||)(shenzhoufilm|secretchina|renminbao|aboluowang|mhradio|guangming|zhengwunet|soundofhope|yuanming|zhuichaguoji|fgmtv|xinsheng|shenyunperformingarts|epochweekly|tuidang|shenyun|falundata|bannedbook|pincong|ogate|voachinese)\\.(org|com|net|rocks)',
-        '0000-00-00 00:00:00', '0000-00-00 00:00:00'),
+        '(.*\\.||)(shenzhoufilm|secretchina|renminbao|aboluowang|mhradio|guangming|zhengwunet|soundofhope|yuanming|zhuichaguoji|fgmtv|xinsheng|shenyunperformingarts|epochweekly|tuidang|shenyun|falundata|bannedbook|pincong|rfi|mingjingnews|boxun|rfa|scmp|ogate|voachinese)\\.(org|com|net|rocks|fr)'),
        (16, '1', '流媒体',
-        '(.*\.||)(youtube|googlevideo|hulu|netflix|nflxvideo|akamai|nflximg|hbo|mtv|bbc|tvb)\.(org|club|com|net|tv)',
-        '2019-11-19 15:04:11', '2019-11-19 15:04:11'),
-       (17, '1', '测速类', '(.*\.||)(fast|speedtest)\.(org|com|net|cn)', '2019-11-19 15:04:11', '2019-11-19 15:04:11'),
-       (18, '1', '涉洗钱', '(.*\.||)(metatrader4|metatrader5|mql5)\.(org|com|net)', '2020-7-9 14:25:11', '2020-7-9 14:25:11');
+        '(.*\.||)(youtube|googlevideo|hulu|netflix|nflxvideo|akamai|nflximg|hbo|mtv|bbc|tvb)\.(org|club|com|net|tv)'),
+       (17, '1', '测速类', '(.*\.||)(fast|speedtest)\.(org|com|net|cn)'),
+       (18, '1', '外汇交易类', '(.*\.||)(metatrader4|metatrader5|mql5)\.(org|com|net)');
 
 -- ----------------------------
 -- Table structure for rule_group

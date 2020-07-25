@@ -43,6 +43,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Redirect;
 use Response;
 use Session;
+use Str;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Validator;
 
@@ -246,7 +247,7 @@ class AdminController extends Controller {
 			$user->password = Hash::make($request->input('password')?: makeRandStr());
 			$user->port = $request->input('port')?: $this->makePort();
 			$user->passwd = $request->input('passwd')?: makeRandStr();
-			$user->vmess_id = $request->input('uuid')?: createGuid();
+			$user->vmess_id = $request->input('uuid')?: Str::uuid();
 			$user->transfer_enable = toGB($request->input('transfer_enable')?: 0);
 			$user->enable = $request->input('enable')?: 0;
 			$user->method = $request->input('method');
@@ -367,7 +368,7 @@ class AdminController extends Controller {
 					'email'           => $email,
 					'port'            => $port,
 					'passwd'          => $request->input('passwd')?: makeRandStr(),
-					'vmess_id'        => $request->input('uuid')?: createGuid(),
+					'vmess_id'        => $request->input('uuid')?: Str::uuid(),
 					'transfer_enable' => toGB($transfer_enable?: 0),
 					'enable'          => $status < 0? 0 : $request->input('enable'),
 					'method'          => $request->input('method'),
@@ -1152,6 +1153,11 @@ class AdminController extends Controller {
 						return Response::json(['status' => 'fail', 'message' => '请先设置【码支付】必要参数']);
 					}
 					break;
+				case 'epay':
+					if(!self::$systemConfig['epay_url'] || !self::$systemConfig['epay_mch_id'] || !self::$systemConfig['epay_key']){
+						return Response::json(['status' => 'fail', 'message' => '请先设置【易支付】必要参数']);
+					}
+					break;
 				case 'payjs':
 					if(!self::$systemConfig['payjs_mch_id'] || !self::$systemConfig['payjs_key']){
 						return Response::json(['status' => 'fail', 'message' => '请先设置【PayJs】必要参数']);
@@ -1205,24 +1211,24 @@ class AdminController extends Controller {
 	// 推送通知测试
 	public function sendTestNotification(): JsonResponse {
 		if(self::$systemConfig['is_notification']){
-			$result = PushNotification::send('这是测试的标题', 'SSRPanel_OM测试内容');
-			if($result == false){
+			$result = PushNotification::send('这是测试的标题', 'ProxyPanel测试内容');
+			if($result === false){
 				return Response::json(['status' => 'fail', 'message' => '发送失败，请重新尝试！']);
 			}
 			switch(self::$systemConfig['is_notification']){
 				case 'serverChan':
-					if(!$result->errno){
+					if(!$result['errno']){
 						return Response::json(['status' => 'success', 'message' => '发送成功，请查看手机是否收到推送消息']);
 					}
 
-					return Response::json(['status' => 'fail', 'message' => $result? $result->errmsg : '未知']);
+					return Response::json(['status' => 'fail', 'message' => $result? $result['errmsg'] : '未知']);
 					break;
 				case 'bark':
-					if($result->code == 200){
+					if($result['code'] == 200){
 						return Response::json(['status' => 'success', 'message' => '发送成功，请查看手机是否收到推送消息']);
 					}
 
-					return Response::json(['status' => 'fail', 'message' => $result->message]);
+					return Response::json(['status' => 'fail', 'message' => $result['message']]);
 					break;
 				default:
 			}
@@ -1266,8 +1272,8 @@ class AdminController extends Controller {
 
 		$spreadsheet = new Spreadsheet();
 		$spreadsheet->getProperties()
-		            ->setCreator('SSRPanel')
-		            ->setLastModifiedBy('SSRPanel')
+		            ->setCreator('ProxyPanel')
+		            ->setLastModifiedBy('ProxyPanel')
 		            ->setTitle('邀请码')
 		            ->setSubject('邀请码')
 		            ->setDescription('')
